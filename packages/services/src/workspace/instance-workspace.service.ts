@@ -68,4 +68,20 @@ export class InstanceWorkspaceService extends APIService {
         throw error?.response?.data;
       });
   }
+
+  /**
+   * Soft-deletes a workspace from the instance.
+   * @param {string} workspaceId - Workspace id
+   */
+  async destroy(workspaceId: string): Promise<void> {
+    const tokenResponse = await this.get("/auth/get-csrf-token/", { validateStatus: null });
+    const csrfToken = tokenResponse?.data?.csrf_token;
+    return this.delete(`/api/instances/workspaces/${workspaceId}/`, undefined, {
+      headers: csrfToken ? { "X-CSRFTOKEN": csrfToken } : {},
+    })
+      .then(() => undefined)
+      .catch((error) => {
+        throw error?.response?.data;
+      });
+  }
 }

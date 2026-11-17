@@ -4,6 +4,7 @@
  * See the LICENSE file for details.
  */
 
+import { useState } from "react";
 import { observer } from "mobx-react";
 
 // plane internal packages
@@ -21,9 +22,28 @@ type TWorkspaceListItemProps = {
 
 export const WorkspaceListItem = observer(function WorkspaceListItem({ workspaceId }: TWorkspaceListItemProps) {
   // store hooks
-  const { getWorkspaceById } = useWorkspace();
+  const { getWorkspaceById, deleteWorkspace } = useWorkspace();
+  // states
+  const [isDeleting, setIsDeleting] = useState(false);
   // derived values
   const workspace = getWorkspaceById(workspaceId);
+
+  const handleDelete = async (event: React.MouseEvent<HTMLButtonElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+    if (!workspace) return;
+    if (!window.confirm(`Delete workspace "${workspace.name}"? Projects and work items inside it will be removed.`))
+      return;
+
+    setIsDeleting(true);
+    try {
+      await deleteWorkspace(workspaceId);
+    } catch (error) {
+      console.error(error);
+      window.alert("Failed to delete workspace.");
+      setIsDeleting(false);
+    }
+  };
 
   if (!workspace) return null;
   return (
@@ -83,7 +103,15 @@ export const WorkspaceListItem = observer(function WorkspaceListItem({ workspace
           </div>
         </div>
       </div>
-      <div className="flex-shrink-0">
+      <div className="flex flex-shrink-0 items-center gap-2">
+        <button
+          type="button"
+          onClick={handleDelete}
+          disabled={isDeleting}
+          className="rounded-md border border-subtle bg-layer-2 px-2.5 py-1 text-caption-sm-medium text-danger-primary hover:bg-layer-1-hover disabled:opacity-70"
+        >
+          {isDeleting ? "Deleting" : "Delete"}
+        </button>
         <NewTabOutline width={14} height={16} className="text-placeholder group-hover:text-secondary" />
       </div>
     </a>

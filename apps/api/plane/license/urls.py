@@ -71,4 +71,9 @@ urlpatterns = [
         name="instance-workspace-availability",
     ),
     path("workspaces/", InstanceWorkSpaceEndpoint.as_view(), name="instance-workspace"),
+    path(
+        "workspaces/<uuid:pk>/",
+        InstanceWorkSpaceEndpoint.as_view(),
+        name="instance-workspace-detail",
+    ),
 ]

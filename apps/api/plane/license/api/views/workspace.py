@@ -108,3 +108,14 @@ class InstanceWorkSpaceEndpoint(BaseAPIView):
                     {"slug": "The workspace with the slug already exists"},
                     status=status.HTTP_409_CONFLICT,
                 )
+
+    def delete(self, request, pk=None):
+        if not pk:
+            return Response({"error": "Workspace id is required"}, status=status.HTTP_400_BAD_REQUEST)
+
+        workspace = Workspace.objects.filter(pk=pk).first()
+        if workspace is None:
+            return Response({"error": "Workspace not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        workspace.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
