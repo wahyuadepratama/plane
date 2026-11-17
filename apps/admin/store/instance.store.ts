@@ -11,6 +11,7 @@ import type { TInstanceStatus } from "@plane/constants";
 import { EInstanceStatus } from "@plane/constants";
 import { InstanceService } from "@plane/services";
 import type {
+  ICreateInstanceAdminPayload,
   IInstance,
   IInstanceAdmin,
   IInstanceConfiguration,
@@ -37,6 +38,8 @@ export interface IInstanceStore {
   fetchInstanceInfo: () => Promise<IInstanceInfo | undefined>;
   updateInstanceInfo: (data: Partial<IInstance>) => Promise<IInstance | undefined>;
   fetchInstanceAdmins: () => Promise<IInstanceAdmin[] | undefined>;
+  createInstanceAdmin: (data: ICreateInstanceAdminPayload) => Promise<IInstanceAdmin>;
+  deleteInstanceAdmin: (adminId: string) => Promise<void>;
   fetchInstanceConfigurations: () => Promise<IInstanceConfiguration[] | undefined>;
   updateInstanceConfigurations: (data: Partial<IFormattedInstanceConfiguration>) => Promise<IInstanceConfiguration[]>;
   disableEmail: () => Promise<void>;
@@ -68,6 +71,8 @@ export class InstanceStore implements IInstanceStore {
       hydrate: action,
       fetchInstanceInfo: action,
       fetchInstanceAdmins: action,
+      createInstanceAdmin: action,
+      deleteInstanceAdmin: action,
       updateInstanceInfo: action,
       fetchInstanceConfigurations: action,
       updateInstanceConfigurations: action,
@@ -158,6 +163,22 @@ export class InstanceStore implements IInstanceStore {
       console.error("Error fetching the instance admins");
       throw error;
     }
+  };
+
+  createInstanceAdmin = async (data: ICreateInstanceAdminPayload) => {
+    const createdAdmin = await this.instanceService.createAdmin(data);
+    runInAction(() => {
+      const existing = this.instanceAdmins ?? [];
+      this.instanceAdmins = [...existing, createdAdmin];
+    });
+    return createdAdmin;
+  };
+
+  deleteInstanceAdmin = async (adminId: string) => {
+    await this.instanceService.deleteAdmin(adminId);
+    runInAction(() => {
+      this.instanceAdmins = (this.instanceAdmins ?? []).filter((admin) => admin.id !== adminId);
+    });
   };
 
   /**

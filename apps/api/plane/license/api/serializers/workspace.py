@@ -18,6 +18,7 @@ class WorkspaceSerializer(BaseSerializer):
     owner = UserLiteSerializer(read_only=True)
     logo_url = serializers.CharField(read_only=True)
     total_projects = serializers.IntegerField(read_only=True)
+    total_active_projects = serializers.IntegerField(read_only=True, required=False, allow_null=True)
     total_members = serializers.IntegerField(read_only=True)
 
     def validate_name(self, value):

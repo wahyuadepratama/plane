@@ -32,6 +32,7 @@ export interface IWorkspace {
   readonly updated_by: string;
   organization_size: string;
   total_projects?: number;
+  total_active_projects?: number;
   role: number;
   timezone: string;
 }

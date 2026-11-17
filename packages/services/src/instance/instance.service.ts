@@ -7,11 +7,13 @@
 // plane imports
 import { API_BASE_URL } from "@plane/constants";
 import type {
+  ICreateInstanceAdminPayload,
   IFormattedInstanceConfiguration,
   IInstance,
   IInstanceAdmin,
   IInstanceConfiguration,
   IInstanceInfo,
+  IInstanceMemberReportResponse,
   TPage,
 } from "@plane/types";
 // api service
@@ -67,6 +69,44 @@ export class InstanceService extends APIService {
   async admins(): Promise<IInstanceAdmin[]> {
     return this.get("/api/instances/admins/", { validateStatus: null })
       .then((response) => response.data)
+      .catch((error) => {
+        throw error?.response?.data;
+      });
+  }
+
+  async createAdmin(data: ICreateInstanceAdminPayload): Promise<IInstanceAdmin> {
+    const tokenResponse = await this.get("/auth/get-csrf-token/", { validateStatus: null });
+    const csrfToken = tokenResponse?.data?.csrf_token;
+    return this.post("/api/instances/admins/", data, {
+      headers: csrfToken ? { "X-CSRFTOKEN": csrfToken } : {},
+    })
+      .then((response) => response?.data)
+      .catch((error) => {
+        throw error?.response?.data;
+      });
+  }
+
+  async deleteAdmin(adminId: string): Promise<void> {
+    const tokenResponse = await this.get("/auth/get-csrf-token/", { validateStatus: null });
+    const csrfToken = tokenResponse?.data?.csrf_token;
+    return this.delete(`/api/instances/admins/${adminId}/`, undefined, {
+      headers: csrfToken ? { "X-CSRFTOKEN": csrfToken } : {},
+    })
+      .then(() => undefined)
+      .catch((error) => {
+        throw error?.response?.data;
+      });
+  }
+
+  async memberReports(params?: {
+    search?: string;
+    workspace_id?: string;
+    state_filter?: string;
+    sort_by?: string;
+    sort_order?: "asc" | "desc";
+  }): Promise<IInstanceMemberReportResponse> {
+    return this.get("/api/instances/member-reports/", { params })
+      .then((response) => response?.data)
       .catch((error) => {
         throw error?.response?.data;
       });

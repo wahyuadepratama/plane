@@ -53,7 +53,18 @@ class InstanceWorkSpaceEndpoint(BaseAPIView):
             .values("count")
         )
 
-        workspaces = Workspace.objects.annotate(total_projects=project_count, total_members=member_count)
+        active_project_count = (
+            Project.objects.filter(workspace_id=OuterRef("id"), archived_at__isnull=True)
+            .order_by()
+            .annotate(count=Func(F("id"), function="Count"))
+            .values("count")
+        )
+
+        workspaces = Workspace.objects.annotate(
+            total_projects=project_count,
+            total_active_projects=active_project_count,
+            total_members=member_count,
+        )
 
         # Add search functionality
         search = request.query_params.get("search", None)
@@ -116,6 +127,12 @@ class InstanceWorkSpaceEndpoint(BaseAPIView):
         workspace = Workspace.objects.filter(pk=pk).first()
         if workspace is None:
             return Response({"error": "Workspace not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        if Project.objects.filter(workspace_id=workspace.id, archived_at__isnull=True).exists():
+            return Response(
+                {"error": "Workspace still has active projects"},
+                status=status.HTTP_409_CONFLICT,
+            )
 
         workspace.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)

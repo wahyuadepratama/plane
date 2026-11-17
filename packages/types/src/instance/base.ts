@@ -66,16 +66,65 @@ export interface IInstanceConfig {
   instance_changelog_url?: string;
 }
 
+export interface IInstanceAdminUserDetail extends IUserLite {
+  is_active?: boolean;
+  last_login_time?: string | null;
+  date_joined?: string;
+}
+
 export interface IInstanceAdmin {
   created_at: string;
   created_by: string;
   id: string;
   instance: string;
-  role: string;
+  role: number | string;
   updated_at: string;
   updated_by: string;
   user: string;
-  user_detail: IUserLite;
+  user_detail: IInstanceAdminUserDetail;
+}
+
+export interface ICreateInstanceAdminPayload {
+  email: string;
+  first_name?: string;
+  last_name?: string;
+  password?: string;
+  role?: number;
+}
+
+export interface IInstanceMemberReportWorkspace {
+  id: string;
+  name: string;
+  slug: string;
+  role: number;
+}
+
+export interface IInstanceMemberReportRow {
+  id: string;
+  email: string;
+  first_name: string;
+  last_name: string;
+  display_name: string;
+  full_name: string;
+  avatar_url: string | null;
+  is_active: boolean;
+  workspaces: IInstanceMemberReportWorkspace[];
+  started_count: number;
+  backlog_count: number;
+  unstarted_count: number;
+}
+
+export interface IInstanceMemberReportSummary {
+  total_members: number;
+  total_started: number;
+  total_backlog: number;
+  total_unstarted: number;
+}
+
+export interface IInstanceMemberReportResponse {
+  results: IInstanceMemberReportRow[];
+  workspaces: Array<Pick<IInstanceMemberReportWorkspace, "id" | "name" | "slug">>;
+  summary: IInstanceMemberReportSummary;
 }
 
 export type TInstanceConfigurationKeys =

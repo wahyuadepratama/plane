@@ -5,7 +5,6 @@
 # Module imports
 from .base import BaseSerializer
 from plane.db.models import User
-from plane.app.serializers import UserAdminLiteSerializer
 from plane.license.models import InstanceAdmin
 
 
@@ -33,8 +32,28 @@ class InstanceAdminMeSerializer(BaseSerializer):
         read_only_fields = fields
 
 
+class InstanceAdminUserSerializer(BaseSerializer):
+    class Meta:
+        model = User
+        fields = [
+            "id",
+            "first_name",
+            "last_name",
+            "avatar",
+            "avatar_url",
+            "is_bot",
+            "display_name",
+            "email",
+            "last_login_medium",
+            "is_active",
+            "last_login_time",
+            "date_joined",
+        ]
+        read_only_fields = fields
+
+
 class InstanceAdminSerializer(BaseSerializer):
-    user_detail = UserAdminLiteSerializer(source="user", read_only=True)
+    user_detail = InstanceAdminUserSerializer(source="user", read_only=True)
 
     class Meta:
         model = InstanceAdmin

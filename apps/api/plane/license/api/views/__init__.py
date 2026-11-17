@@ -26,3 +26,4 @@ from .workspace import (
     InstanceWorkSpaceAvailabilityCheckEndpoint,
     InstanceWorkSpaceEndpoint,
 )
+from .report import InstanceMemberReportEndpoint

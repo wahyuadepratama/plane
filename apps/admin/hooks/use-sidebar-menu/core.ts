@@ -7,16 +7,26 @@
 // plane imports
 import {
   AiStarFourOutline,
+  AnalyticsOutline,
   ImageOutline,
   LockOutline,
   MailOutline,
+  MembersOutline,
   SettingsOutline,
   WorkspaceOutline,
 } from "@makeplane/propel/icons";
 // types
 import type { TSidebarMenuItem } from "./types";
 
-export type TCoreSidebarMenuKey = "general" | "email" | "workspace" | "authentication" | "ai" | "image";
+export type TCoreSidebarMenuKey =
+  | "general"
+  | "email"
+  | "workspace"
+  | "users"
+  | "report"
+  | "authentication"
+  | "ai"
+  | "image";
 
 export const coreSidebarMenuLinks: Record<TCoreSidebarMenuKey, TSidebarMenuItem> = {
   general: {
@@ -36,6 +46,18 @@ export const coreSidebarMenuLinks: Record<TCoreSidebarMenuKey, TSidebarMenuItem>
     name: "Workspaces",
     description: "Manage all workspaces on this instance.",
     href: `/workspace/`,
+  },
+  users: {
+    Icon: MembersOutline,
+    name: "Users",
+    description: "Manage God Mode administrator accounts.",
+    href: `/users/`,
+  },
+  report: {
+    Icon: AnalyticsOutline,
+    name: "Report",
+    description: "View workspace members and active work item states.",
+    href: `/report/`,
   },
   authentication: {
     Icon: LockOutline,

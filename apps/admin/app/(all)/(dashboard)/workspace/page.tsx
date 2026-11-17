@@ -133,8 +133,8 @@ const WorkspaceManagementPage = observer(function WorkspaceManagementPage(_props
                   )}
                 </div>
                 <div className="text-body-xs-regular leading-5 text-tertiary">
-                  Delete removes the workspace from this instance. You can only open a workspace if you are an Admin or
-                  a Member.
+                  Delete stays disabled while a workspace still has active projects. You can only open a workspace if you
+                  are an Admin or a Member.
                 </div>
               </div>
               <div className="flex items-center gap-2">

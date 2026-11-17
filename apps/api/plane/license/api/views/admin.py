@@ -30,7 +30,7 @@ from plane.license.api.serializers import (
 )
 from plane.license.models import Instance, InstanceAdmin
 from plane.db.models import User, Profile
-from plane.utils.cache import cache_response, invalidate_cache
+from plane.utils.cache import invalidate_cache, invalidate_cache_directly
 from plane.authentication.utils.login import user_login
 from plane.authentication.utils.host import base_host, user_ip
 from plane.authentication.rate_limit import throttle_auth_redirect
@@ -46,14 +46,22 @@ from plane.utils.path_validator import get_safe_redirect_url
 class InstanceAdminEndpoint(BaseAPIView):
     permission_classes = [InstanceAdminPermission]
 
-    @invalidate_cache(path="/api/instances/", user=False)
-    # Create an instance admin
+    # Create or promote an instance admin
     def post(self, request):
-        email = request.data.get("email", False)
+        raw_email = request.data.get("email", "")
+        email = str(raw_email).strip().lower() if raw_email else ""
+        first_name = str(request.data.get("first_name", "") or "").strip()
+        last_name = str(request.data.get("last_name", "") or "").strip()
+        password = request.data.get("password") or ""
         role = request.data.get("role", 20)
 
         if not email:
             return Response({"error": "Email is required"}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            validate_email(email)
+        except ValidationError:
+            return Response({"error": "Please enter a valid email address"}, status=status.HTTP_400_BAD_REQUEST)
 
         instance = Instance.objects.first()
         if instance is None:
@@ -62,14 +70,59 @@ class InstanceAdminEndpoint(BaseAPIView):
                 status=status.HTTP_403_FORBIDDEN,
             )
 
-        # Fetch the user
-        user = User.objects.get(email=email)
+        user = User.objects.filter(email=email).first()
 
-        instance_admin = InstanceAdmin.objects.create(instance=instance, user=user, role=role)
+        if user is not None:
+            if user.is_bot:
+                return Response(
+                    {"error": "Bot users cannot be added as instance admins"},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            if InstanceAdmin.objects.filter(instance=instance, user=user).exists():
+                return Response(
+                    {"error": "This user is already an instance admin"},
+                    status=status.HTTP_409_CONFLICT,
+                )
+
+            instance_admin = InstanceAdmin.objects.create(instance=instance, user=user, role=role)
+        else:
+            if not first_name:
+                return Response(
+                    {"error": "First name is required for a new account"},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            if not password:
+                return Response(
+                    {"error": "Password is required for a new account"},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            if not is_password_strong(password):
+                return Response(
+                    {"error": "Password is too weak. Use a stronger passphrase or password."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            with transaction.atomic():
+                display_name = f"{first_name} {last_name}".strip() or User.get_display_name(email)
+                user = User.objects.create(
+                    first_name=first_name,
+                    last_name=last_name,
+                    display_name=display_name,
+                    email=email,
+                    username=uuid.uuid4().hex,
+                    password=make_password(password),
+                    is_password_autoset=False,
+                    is_active=True,
+                )
+                Profile.objects.create(user=user)
+                instance_admin = InstanceAdmin.objects.create(instance=instance, user=user, role=role)
+
+        invalidate_cache_directly(path="/api/instances/", user=False)
+        invalidate_cache_directly(path="/api/instances/admins/", user=False)
         serializer = InstanceAdminSerializer(instance_admin)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
-    @cache_response(60 * 60 * 2, user=False)
     def get(self, request):
         instance = Instance.objects.first()
         if instance is None:
@@ -77,14 +130,44 @@ class InstanceAdminEndpoint(BaseAPIView):
                 {"error": "Instance is not registered yet"},
                 status=status.HTTP_403_FORBIDDEN,
             )
-        instance_admins = InstanceAdmin.objects.filter(instance=instance)
+        instance_admins = (
+            InstanceAdmin.objects.filter(instance=instance, user__isnull=False)
+            .select_related("user")
+            .order_by("created_at")
+        )
         serializer = InstanceAdminSerializer(instance_admins, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
-    @invalidate_cache(path="/api/instances/", user=False)
-    def delete(self, request, pk):
+    def delete(self, request, pk=None):
+        if not pk:
+            return Response({"error": "Admin id is required"}, status=status.HTTP_400_BAD_REQUEST)
+
         instance = Instance.objects.first()
-        InstanceAdmin.objects.filter(instance=instance, pk=pk).delete()
+        if instance is None:
+            return Response(
+                {"error": "Instance is not registered yet"},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        target = InstanceAdmin.objects.filter(instance=instance, pk=pk).first()
+        if target is None:
+            return Response({"error": "Instance admin not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        if target.user_id == request.user.id:
+            return Response(
+                {"error": "You cannot remove your own God Mode access"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if InstanceAdmin.objects.filter(instance=instance, user__isnull=False).count() <= 1:
+            return Response(
+                {"error": "Cannot remove the last instance admin"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        target.delete()
+        invalidate_cache_directly(path="/api/instances/", user=False)
+        invalidate_cache_directly(path="/api/instances/admins/", user=False)
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 

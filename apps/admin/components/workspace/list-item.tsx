@@ -27,11 +27,13 @@ export const WorkspaceListItem = observer(function WorkspaceListItem({ workspace
   const [isDeleting, setIsDeleting] = useState(false);
   // derived values
   const workspace = getWorkspaceById(workspaceId);
+  const activeProjects = workspace?.total_active_projects ?? 0;
+  const hasActiveProjects = activeProjects > 0;
 
   const handleDelete = async (event: React.MouseEvent<HTMLButtonElement>) => {
     event.preventDefault();
     event.stopPropagation();
-    if (!workspace) return;
+    if (!workspace || hasActiveProjects) return;
     if (!window.confirm(`Delete workspace "${workspace.name}"? Projects and work items inside it will be removed.`))
       return;
 
@@ -104,14 +106,30 @@ export const WorkspaceListItem = observer(function WorkspaceListItem({ workspace
         </div>
       </div>
       <div className="flex flex-shrink-0 items-center gap-2">
-        <button
-          type="button"
-          onClick={handleDelete}
-          disabled={isDeleting}
-          className="rounded-md border border-subtle bg-layer-2 px-2.5 py-1 text-caption-sm-medium text-danger-primary hover:bg-layer-1-hover disabled:opacity-70"
+        <Tooltip
+          label={
+            hasActiveProjects
+              ? "Delete is disabled while this workspace still has active projects."
+              : "Delete workspace"
+          }
         >
-          {isDeleting ? "Deleting" : "Delete"}
-        </button>
+          <span
+            className="inline-flex"
+            onClick={(event) => {
+              event.preventDefault();
+              event.stopPropagation();
+            }}
+          >
+            <button
+              type="button"
+              onClick={handleDelete}
+              disabled={isDeleting || hasActiveProjects}
+              className="rounded-md border border-subtle bg-layer-2 px-2.5 py-1 text-caption-sm-medium text-danger-primary hover:bg-layer-1-hover disabled:cursor-not-allowed disabled:opacity-70"
+            >
+              {isDeleting ? "Deleting" : "Delete"}
+            </button>
+          </span>
+        </Tooltip>
         <NewTabOutline width={14} height={16} className="text-placeholder group-hover:text-secondary" />
       </div>
     </a>
